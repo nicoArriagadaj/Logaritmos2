@@ -202,58 +202,105 @@ std::vector<Arista> kruskal_heap_SinCompresion_caminos(int n, std::vector<Arista
 }
 
 
-
-
+#include <fstream> // Para archivo csv
+#include <iomanip> // para más precisión.
 
 int main() {
-    int N = 10000; // total de nodos.
-    auto nodos = generar_nodos(N);
-    auto aristas = generar_aristas(nodos);
-    // Compresión de caminos sort
-    auto start_sort = std::chrono::high_resolution_clock::now();
-    auto mst_sort = kruskal_sort_Compresion_caminos(N, aristas);
-    auto end_sort = std::chrono::high_resolution_clock::now();
-    // Compresión de caminos heap
-    auto start_heap = std::chrono::high_resolution_clock::now();
-    auto mst_heap = kruskal_heap_Compresion_caminos(N, aristas);
-    auto end_heap = std::chrono::high_resolution_clock::now();
-    // Sin compresión de caminos sort
-    auto start_sort_nc = std::chrono::high_resolution_clock::now();
-    auto mst_sort_nc = kruskal_sort_SinCompresion_caminos(N, aristas);
-    auto end_sort_nc = std::chrono::high_resolution_clock::now();
-    // Sin compresión de caminos heap
-    auto start_heap_nc = std::chrono::high_resolution_clock::now();
-    auto mst_heap_nc = kruskal_heap_SinCompresion_caminos(N, aristas);
-    auto end_heap_nc = std::chrono::high_resolution_clock::now();
+    std::vector<int> Nval = {32, 64, 128, 256, 512, 1024, 2048, 4096}; 
+    int repeticiones = 5;
 
-    // calculo de chrono -> tiempo de ejecucion sort_heap con compresion caminos
-    std::chrono::duration<double, std::milli> tiempo_sort = end_sort - start_sort;
-    std::chrono::duration<double, std::milli> tiempo_heap = end_heap - start_heap;
+    // Abrir archivo para guardar resultados
+    std::ofstream fout("resultados.csv");
+    fout << "N,metodo,rep,t_ms,peso_mst\n";
 
+    // Configura la precisión para todo el archivo (opcional, para CSV)
+    fout << std::fixed << std::setprecision(8);
+    std::cout << std::fixed << std::setprecision(8);
 
-    // calculo de chrono -> tiempo de ejecucion sort_heap sin compresion caminos (nc)
-    std::chrono::duration<double, std::milli> tiempo_sort_nc = end_sort_nc - start_sort_nc;
-    std::chrono::duration<double, std::milli> tiempo_heap_nc = end_heap_nc - start_heap_nc;
+    for (int N : Nval) {
+        std::cout << "---- N = " << N << " ----" << std::endl;
 
-    std::cout << "[Kruskal + sort + compresion] Tiempo: " << tiempo_sort.count() << "ms, Peso total: ";
-    double peso_total = 0;
-    for (const auto& a : mst_sort) peso_total += a.peso;
-    std::cout << peso_total << std::endl;
+        // Vectores para guardar resultados individuales
+        std::vector<double> tiempos_sort, tiempos_heap, tiempos_sort_nc, tiempos_heap_nc;
+        std::vector<double> pesos_sort, pesos_heap, pesos_sort_nc, pesos_heap_nc;
 
-    std::cout << "[Kruskal + heap + compresion] Tiempo: " << tiempo_heap.count() << "ms, Peso total: ";
-    peso_total = 0;
-    for (const auto& a : mst_heap) peso_total += a.peso;
-    std::cout << peso_total << std::endl;
+        for (int rep = 0; rep < repeticiones; ++rep) {
+            auto nodos = generar_nodos(N);
+            auto aristas = generar_aristas(nodos);
 
-    std::cout << "[Kruskal + sort + sin compresion] Tiempo: " << tiempo_sort_nc.count() << "ms, Peso total: ";
-    peso_total = 0;
-    for (const auto& a : mst_sort_nc) peso_total += a.peso;
-    std::cout << peso_total << std::endl;
+            // Kruskal + sort + compresión
+            auto start_sort = std::chrono::high_resolution_clock::now();
+            auto mst_sort = kruskal_sort_Compresion_caminos(N, aristas);
+            auto end_sort = std::chrono::high_resolution_clock::now();
 
-    std::cout << "[Kruskal + heap + sin compresion] Tiempo: " << tiempo_heap_nc.count() << "ms, Peso total: ";
-    peso_total = 0;
-    for (const auto& a : mst_heap_nc) peso_total += a.peso;
-    std::cout << peso_total << std::endl;
+            double tiempo_sort = std::chrono::duration<double, std::milli>(end_sort - start_sort).count();
+            double peso_sort = 0;
+            for (const auto& a : mst_sort) peso_sort += a.peso;
+            tiempos_sort.push_back(tiempo_sort);
+            pesos_sort.push_back(peso_sort);
+            fout << N << ",sort_compresion," << rep+1 << "," << tiempo_sort << "," << peso_sort << "\n";
 
+            // Kruskal + heap + compresión
+            auto start_heap = std::chrono::high_resolution_clock::now();
+            auto mst_heap = kruskal_heap_Compresion_caminos(N, aristas);
+            auto end_heap = std::chrono::high_resolution_clock::now();
+
+            double tiempo_heap = std::chrono::duration<double, std::milli>(end_heap - start_heap).count();
+            double peso_heap = 0;
+            for (const auto& a : mst_heap) peso_heap += a.peso;
+            tiempos_heap.push_back(tiempo_heap);
+            pesos_heap.push_back(peso_heap);
+            fout << N << ",heap_compresion," << rep+1 << "," << tiempo_heap << "," << peso_heap << "\n";
+
+            // Kruskal + sort + SIN compresión
+            auto start_sort_nc = std::chrono::high_resolution_clock::now();
+            auto mst_sort_nc = kruskal_sort_SinCompresion_caminos(N, aristas);
+            auto end_sort_nc = std::chrono::high_resolution_clock::now();
+
+            double tiempo_sort_nc = std::chrono::duration<double, std::milli>(end_sort_nc - start_sort_nc).count();
+            double peso_sort_nc = 0;
+            for (const auto& a : mst_sort_nc) peso_sort_nc += a.peso;
+            tiempos_sort_nc.push_back(tiempo_sort_nc);
+            pesos_sort_nc.push_back(peso_sort_nc);
+            fout << N << ",sort_sincompresion," << rep+1 << "," << tiempo_sort_nc << "," << peso_sort_nc << "\n";
+
+            // Kruskal + heap + SIN compresión
+            auto start_heap_nc = std::chrono::high_resolution_clock::now();
+            auto mst_heap_nc = kruskal_heap_SinCompresion_caminos(N, aristas);
+            auto end_heap_nc = std::chrono::high_resolution_clock::now();
+
+            double tiempo_heap_nc = std::chrono::duration<double, std::milli>(end_heap_nc - start_heap_nc).count();
+            double peso_heap_nc = 0;
+            for (const auto& a : mst_heap_nc) peso_heap_nc += a.peso;
+            tiempos_heap_nc.push_back(tiempo_heap_nc);
+            pesos_heap_nc.push_back(peso_heap_nc);
+            fout << N << ",heap_sincompresion," << rep+1 << "," << tiempo_heap_nc << "," << peso_heap_nc << "\n";
+        }
+
+        // Promedios
+        double avg_sort = std::accumulate(tiempos_sort.begin(), tiempos_sort.end(), 0.0) / repeticiones;
+        double avg_heap = std::accumulate(tiempos_heap.begin(), tiempos_heap.end(), 0.0) / repeticiones;
+        double avg_sort_nc = std::accumulate(tiempos_sort_nc.begin(), tiempos_sort_nc.end(), 0.0) / repeticiones;
+        double avg_heap_nc = std::accumulate(tiempos_heap_nc.begin(), tiempos_heap_nc.end(), 0.0) / repeticiones;
+
+        double avg_peso_sort = std::accumulate(pesos_sort.begin(), pesos_sort.end(), 0.0) / repeticiones;
+        double avg_peso_heap = std::accumulate(pesos_heap.begin(), pesos_heap.end(), 0.0) / repeticiones;
+        double avg_peso_sort_nc = std::accumulate(pesos_sort_nc.begin(), pesos_sort_nc.end(), 0.0) / repeticiones;
+        double avg_peso_heap_nc = std::accumulate(pesos_heap_nc.begin(), pesos_heap_nc.end(), 0.0) / repeticiones;
+
+        std::cout << "[Kruskal + sort + compresion]    Promedio tiempo: " 
+            << avg_sort << "ms, Promedio peso: " << avg_peso_sort << std::endl;
+
+        std::cout << "[Kruskal + heap + compresion]    Promedio tiempo: " 
+            << avg_heap << "ms, Promedio peso: " << avg_peso_heap << std::endl;
+
+        std::cout << "[Kruskal + sort + sin compresion]    Promedio tiempo: " 
+            << avg_sort_nc << "ms, Promedio peso: " << avg_peso_sort_nc << std::endl;
+
+        std::cout << "[Kruskal + heap + sin compresion]    Promedio tiempo: " 
+            << avg_heap_nc << "ms, Promedio peso: " << avg_peso_heap_nc << std::endl;
+    }
+
+    std::cout << "Resultados individuales y promedios guardados en resultados.csv" << std::endl;
     return 0;
 }
